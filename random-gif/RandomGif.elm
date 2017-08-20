@@ -1,5 +1,18 @@
 module RandomGif exposing (init, update, view)
 
+{-| Utils to fetch and display a random gif from giphy
+
+@docs init
+Initializes the randomGif model
+
+@docs update
+Updates the model
+
+@docs view
+Displays the random funny cat gif and a button to fetch a new one
+
+-}
+
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onClick)
@@ -14,6 +27,8 @@ type alias Model =
     }
 
 
+{-| Initializes the model with a waiting gif
+-}
 init : String -> ( Model, Cmd Msg )
 init topic =
     let
@@ -30,6 +45,8 @@ type Msg
     | NewGif (Result Http.Error String)
 
 
+{-| Updates the model with the result of fetching the new gif
+-}
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
@@ -43,6 +60,8 @@ update msg model =
             ( model, Cmd.none )
 
 
+{-| Displays the fetched gif and a button to get a new one
+-}
 view : Model -> Html Msg
 view model =
     div []
