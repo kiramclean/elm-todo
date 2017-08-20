@@ -1,9 +1,21 @@
 port module Main exposing (..)
 
 import Html exposing (..)
-import Html.Attributes exposing (..)
+import Html.Attributes
+    exposing
+        ( autofocus
+        , checked
+        , class
+        , classList
+        , href
+        , placeholder
+        , rel
+        , type_
+        , value
+        )
 import Html.Events exposing (keyCode, on, onCheck, onClick, onInput)
 import Json.Decode as Decode
+import Json.Decode.Pipeline exposing (decode, required)
 import Json.Encode as Encode
 
 
@@ -379,20 +391,20 @@ decodeJson modelJson =
 
 modelDecoder : Decode.Decoder Model
 modelDecoder =
-    Decode.map4 Model
-        (Decode.field "todos" (Decode.list todoDecoder))
-        (Decode.field "todo" todoDecoder)
-        (Decode.field "filter" (Decode.string |> Decode.map filterStateDecoder))
-        (Decode.field "nextId" Decode.int)
+    decode Model
+        |> required "todos" (Decode.list todoDecoder)
+        |> required "todo" todoDecoder
+        |> required "filter" (Decode.string |> Decode.map filterStateDecoder)
+        |> required "nextId" Decode.int
 
 
 todoDecoder : Decode.Decoder Todo
 todoDecoder =
-    Decode.map4 Todo
-        (Decode.field "title" Decode.string)
-        (Decode.field "completed" Decode.bool)
-        (Decode.field "editing" Decode.bool)
-        (Decode.field "id" Decode.int)
+    decode Todo
+        |> required "title" Decode.string
+        |> required "completed" Decode.bool
+        |> required "editing" Decode.bool
+        |> required "id" Decode.int
 
 
 filterStateDecoder : String -> FilterState
