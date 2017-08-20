@@ -24,20 +24,24 @@ initialModel =
     }
 
 
-update : Msg -> Model -> Model
+update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         Increment ->
-            { model
+            ( { model
                 | count = model.count + 1
                 , increment = model.increment + 1
-            }
+              }
+            , Cmd.none
+            )
 
         Decrement ->
-            { model
+            ( { model
                 | count = model.count - 1
                 , decrement = model.decrement + 1
-            }
+              }
+            , Cmd.none
+            )
 
 
 view : Model -> Html Msg
@@ -52,8 +56,13 @@ view model =
 
 
 main =
-    Html.beginnerProgram
-        { model = initialModel
+    Html.program
+        { init = ( initialModel, Cmd.none )
         , view = view
         , update = update
+        , subscriptions = subscriptions
         }
+
+
+subscriptions model =
+    Sub.none
