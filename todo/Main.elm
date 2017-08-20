@@ -1,9 +1,10 @@
-module Main exposing (..)
+port module Main exposing (..)
 
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (keyCode, on, onCheck, onClick, onInput)
-import Json.Decode as Json
+import Json.Decode as Decode
+import Json.Encode as Encode
 
 
 type alias Todo =
@@ -35,6 +36,7 @@ type Msg
     | Delete Todo
     | UpdateField String
     | ClearCompleted
+    | SetModel Model
     | Filter FilterState
 
 
@@ -66,15 +68,17 @@ newTodo =
 --- UPDATE
 
 
-update : Msg -> Model -> Model
+update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         Add ->
-            { model
+            ( { model
                 | todos = model.todo :: model.todos
                 , todo = { newTodo | id = model.nextId }
                 , nextId = model.nextId + 1
-            }
+              }
+            , Cmd.none
+            )
 
         Complete todo ->
             let
@@ -84,9 +88,11 @@ update msg model =
                     else
                         thisTodo
             in
-            { model
+            ( { model
                 | todos = List.map updateTodo model.todos
-            }
+              }
+            , Cmd.none
+            )
 
         Uncomplete todo ->
             let
@@ -96,17 +102,21 @@ update msg model =
                     else
                         thisTodo
             in
-            { model
+            ( { model
                 | todos = List.map updateTodo model.todos
-            }
+              }
+            , Cmd.none
+            )
 
         Delete todo ->
-            { model
+            ( { model
                 | todos =
                     List.filter
                         (\mappedTodo -> todo.id /= mappedTodo.id)
                         model.todos
-            }
+              }
+            , Cmd.none
+            )
 
         UpdateField value ->
             let
@@ -116,18 +126,23 @@ update msg model =
                 updatedTodo =
                     { todo | title = value }
             in
-            { model | todo = updatedTodo }
+            ( { model | todo = updatedTodo }, Cmd.none )
 
         ClearCompleted ->
-            { model
+            ( { model
                 | todos =
                     List.filter
                         (\todo -> todo.completed == False)
                         model.todos
-            }
+              }
+            , Cmd.none
+            )
+
+        SetModel model ->
+            ( model, Cmd.none )
 
         Filter filterState ->
-            { model | filter = filterState }
+            ( { model | filter = filterState }, Cmd.none )
 
 
 onEnter : Msg -> Attribute Msg
@@ -256,11 +271,30 @@ filterItemView model filterState =
 
 
 main =
-    Html.beginnerProgram
-        { model = initialModel
+    Html.program
+        { init = ( initialModel, Cmd.none )
         , update = update
         , view = view
+        , subscriptions = subscriptions
         }
+
+
+subscriptions model =
+    Sub.none
+
+
+
+-- INPUT PORTS
+
+
+port storageInput : (Model -> msg) -> Sub msg
+
+
+
+-- OUTPUT PORTS
+
+
+port storage : Model -> Cmd msg
 
 
 styles : String
