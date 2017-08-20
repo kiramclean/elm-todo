@@ -8,7 +8,14 @@
   <body>
     <script type="text/javascript" src="elm.js"></script>
     <script charset="utf-8">
+        var currentModel = localStorage.getItem("todos");
         var app = Elm.Main.fullscreen();
+        if (currentModel) {
+          app.ports.storageInput.send(JSON.parse(currentModel));
+        }
+        app.ports.storage.subscribe(function(data) {
+          localStorage.setItem("todos", JSON.stringify(data));
+        });
         window.app = app;
     </script>
   </body>

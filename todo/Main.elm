@@ -72,12 +72,16 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         Add ->
-            ( { model
-                | todos = model.todo :: model.todos
-                , todo = { newTodo | id = model.nextId }
-                , nextId = model.nextId + 1
-              }
-            , Cmd.none
+            let
+                newModel =
+                    { model
+                        | todos = model.todo :: model.todos
+                        , todo = { newTodo | id = model.nextId }
+                        , nextId = model.nextId + 1
+                    }
+            in
+            ( newModel
+            , sendToStorage newModel
             )
 
         Complete todo ->
@@ -87,11 +91,14 @@ update msg model =
                         { todo | completed = True }
                     else
                         thisTodo
+
+                newModel =
+                    { model
+                        | todos = List.map updateTodo model.todos
+                    }
             in
-            ( { model
-                | todos = List.map updateTodo model.todos
-              }
-            , Cmd.none
+            ( newModel
+            , sendToStorage newModel
             )
 
         Uncomplete todo ->
@@ -101,21 +108,28 @@ update msg model =
                         { thisTodo | completed = False }
                     else
                         thisTodo
+
+                newModel =
+                    { model
+                        | todos = List.map updateTodo model.todos
+                    }
             in
-            ( { model
-                | todos = List.map updateTodo model.todos
-              }
-            , Cmd.none
+            ( newModel
+            , sendToStorage newModel
             )
 
         Delete todo ->
-            ( { model
-                | todos =
-                    List.filter
-                        (\mappedTodo -> todo.id /= mappedTodo.id)
-                        model.todos
-              }
-            , Cmd.none
+            let
+                newModel =
+                    { model
+                        | todos =
+                            List.filter
+                                (\mappedTodo -> todo.id /= mappedTodo.id)
+                                model.todos
+                    }
+            in
+            ( newModel
+            , sendToStorage newModel
             )
 
         UpdateField value ->
@@ -125,24 +139,39 @@ update msg model =
 
                 updatedTodo =
                     { todo | title = value }
-            in
-            ( { model | todo = updatedTodo }, Cmd.none )
 
-        ClearCompleted ->
-            ( { model
-                | todos =
-                    List.filter
-                        (\todo -> todo.completed == False)
-                        model.todos
-              }
-            , Cmd.none
+                newModel =
+                    { model | todo = updatedTodo }
+            in
+            ( newModel
+            , sendToStorage newModel
             )
 
-        SetModel model ->
-            ( model, Cmd.none )
+        ClearCompleted ->
+            let
+                newModel =
+                    { model
+                        | todos =
+                            List.filter
+                                (\todo -> todo.completed == False)
+                                model.todos
+                    }
+            in
+            ( newModel
+            , sendToStorage newModel
+            )
+
+        SetModel newModel ->
+            ( newModel, Cmd.none )
 
         Filter filterState ->
-            ( { model | filter = filterState }, Cmd.none )
+            let
+                newModel =
+                    { model | filter = filterState }
+            in
+            ( newModel
+            , sendToStorage newModel
+            )
 
 
 onEnter : Msg -> Attribute Msg
@@ -150,11 +179,11 @@ onEnter msg =
     let
         isEnter code =
             if code == 13 then
-                Json.succeed msg
+                Decode.succeed msg
             else
-                Json.fail "not the right keycode"
+                Decode.fail "not the right keycode"
     in
-    on "keydown" (keyCode |> Json.andThen isEnter)
+    on "keydown" (keyCode |> Decode.andThen isEnter)
 
 
 filteredTodos : Model -> List Todo
@@ -280,21 +309,64 @@ main =
 
 
 subscriptions model =
-    Sub.none
+    storageInput mapStorageInput
+
+
+mapStorageInput : Decode.Value -> Msg
+mapStorageInput modelJson =
+    let
+        model =
+            initialModel
+    in
+    SetModel model
+
+
+sendToStorage : Model -> Cmd Msg
+sendToStorage model =
+    encodeJson model |> storage
+
+
+
+-- JSON ENCODING
+
+
+encodeJson : Model -> Encode.Value
+encodeJson model =
+    Encode.object
+        [ ( "todos", Encode.list (List.map encodeTodo model.todos) )
+        , ( "todo", encodeTodo model.todo )
+        , ( "filter", encodeFilterState model.filter )
+        , ( "nextId", Encode.int model.nextId )
+        ]
+
+
+encodeTodo : Todo -> Encode.Value
+encodeTodo todo =
+    Encode.object
+        [ ( "title", Encode.string todo.title )
+        , ( "completed", Encode.bool todo.completed )
+        , ( "editing", Encode.bool todo.editing )
+        , ( "id", Encode.int todo.id )
+        ]
+
+
+encodeFilterState : FilterState -> Encode.Value
+encodeFilterState filterState =
+    Encode.string (filterState |> toString)
 
 
 
 -- INPUT PORTS
 
 
-port storageInput : (Model -> msg) -> Sub msg
+port storageInput : (Decode.Value -> msg) -> Sub msg
 
 
 
 -- OUTPUT PORTS
 
 
-port storage : Model -> Cmd msg
+port storage : Encode.Value -> Cmd msg
 
 
 styles : String
