@@ -38,6 +38,7 @@ type Msg
     | ClearCompleted
     | SetModel Model
     | Filter FilterState
+    | NoOp
 
 
 initialModel : Model
@@ -172,6 +173,9 @@ update msg model =
             ( newModel
             , sendToStorage newModel
             )
+
+        NoOp ->
+            ( model, Cmd.none )
 
 
 onEnter : Msg -> Attribute Msg
@@ -312,13 +316,22 @@ subscriptions model =
     storageInput mapStorageInput
 
 
+
+-- LOCAL STORAGE
+
+
 mapStorageInput : Decode.Value -> Msg
 mapStorageInput modelJson =
-    let
-        model =
-            initialModel
-    in
-    SetModel model
+    case decodeJson modelJson of
+        Ok model ->
+            SetModel model
+
+        Err errorMessage ->
+            let
+                _ =
+                    Debug.log "Error in mapStorageInput:" errorMessage
+            in
+            NoOp
 
 
 sendToStorage : Model -> Cmd Msg
@@ -353,6 +366,56 @@ encodeTodo todo =
 encodeFilterState : FilterState -> Encode.Value
 encodeFilterState filterState =
     Encode.string (filterState |> toString)
+
+
+
+-- JSON DECODING
+
+
+decodeJson : Decode.Value -> Result String Model
+decodeJson modelJson =
+    Decode.decodeValue modelDecoder modelJson
+
+
+modelDecoder : Decode.Decoder Model
+modelDecoder =
+    Decode.map4 Model
+        (Decode.field "todos" (Decode.list todoDecoder))
+        (Decode.field "todo" todoDecoder)
+        (Decode.field "filter" (Decode.string |> Decode.map filterStateDecoder))
+        (Decode.field "nextId" Decode.int)
+
+
+todoDecoder : Decode.Decoder Todo
+todoDecoder =
+    Decode.map4 Todo
+        (Decode.field "title" Decode.string)
+        (Decode.field "completed" Decode.bool)
+        (Decode.field "editing" Decode.bool)
+        (Decode.field "id" Decode.int)
+
+
+filterStateDecoder : String -> FilterState
+filterStateDecoder string =
+    case string of
+        "All" ->
+            All
+
+        "Active" ->
+            Active
+
+        "Completed" ->
+            Completed
+
+        _ ->
+            let
+                _ =
+                    Debug.log "filterStateDecoder" <|
+                        "Couldn't decode value "
+                            ++ string
+                            ++ " so defaulting to All."
+            in
+            All
 
 
 
