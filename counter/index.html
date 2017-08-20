@@ -9,6 +9,11 @@
     <script type="text/javascript" src="elm.js"></script>
     <script charset="utf-8">
         var app = Elm.Main.fullscreen();
+        var incrementClickCount = 0;
+        app.ports.increment.subscribe(function() {
+          incrementClickCount += 1;
+          console.log("Increment has been clicked")
+        })
         window.app = app;
     </script>
   </body>
