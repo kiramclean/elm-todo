@@ -1,17 +1,14 @@
 port module Main exposing (..)
 
 import Html exposing (..)
-import Html.Attributes
-    exposing
-        ( class
-        )
+import Html.Attributes exposing (src)
 import Html.Events exposing (onClick)
+import Http
 import Json.Decode as Decode
 import Json.Decode.Pipeline exposing (decode, required)
-import Json.Encode as Encode
+import Task
 
 
--- import Json.Decode.Pipeline exposing (decode, required)
 -- MODEL
 
 
@@ -23,17 +20,21 @@ type alias Model =
 
 
 type Msg
-    = NewJoke
-    | SetModel Model
-    | NoOp
+    = FetchJoke
+    | ReceiveJoke (Result Http.Error Model)
 
 
 initialModel : Model
 initialModel =
     { icon_url = ""
-    , id = "0"
-    , value = "No jokes yet."
+    , id = ""
+    , value = ""
     }
+
+
+apiEndpoint : String
+apiEndpoint =
+    "https://api.chucknorris.io/jokes/random"
 
 
 
@@ -43,14 +44,27 @@ initialModel =
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        NewJoke ->
+        FetchJoke ->
+            ( model, fetchJoke )
+
+        ReceiveJoke (Ok joke) ->
+            ( joke, Cmd.none )
+
+        ReceiveJoke (Err _) ->
             ( model, Cmd.none )
 
-        SetModel model ->
-            ( model, Cmd.none )
 
-        NoOp ->
-            ( model, Cmd.none )
+fetchJoke : Cmd Msg
+fetchJoke =
+    Http.send ReceiveJoke (Http.get apiEndpoint jokeDecoder)
+
+
+jokeDecoder : Decode.Decoder Model
+jokeDecoder =
+    decode Model
+        |> required "icon_url" Decode.string
+        |> required "id" Decode.string
+        |> required "value" Decode.string
 
 
 
@@ -60,7 +74,17 @@ update msg model =
 view : Model -> Html Msg
 view model =
     div []
-        [ button [ onClick NewJoke ] [ text "Get a new joke!" ]
+        [ h3 [] [ text "Chuck Norris Jokes" ]
+        , viewJoke model
+        , button [ onClick FetchJoke ] [ text "Get a new joke!" ]
+        ]
+
+
+viewJoke : Model -> Html Msg
+viewJoke model =
+    div []
+        [ img [ src model.icon_url ] []
+        , p [] [ text model.value ]
         ]
 
 
@@ -74,49 +98,4 @@ main =
 
 
 subscriptions model =
-    storageInput mapStorageInput
-
-
-
--- INPUT PORTS
-
-
-port storageInput : (Decode.Value -> msg) -> Sub msg
-
-
-
--- OUTPUT PORTS
-
-
-port storage : Encode.Value -> Cmd msg
-
-
-
--- SUBSCRIPTIONS
-
-
-mapStorageInput : Decode.Value -> Msg
-mapStorageInput modelJson =
-    case decodeJson modelJson of
-        Ok model ->
-            SetModel model
-
-        Err errorMessage ->
-            let
-                _ =
-                    Debug.log "Error in mapStorageInput:" errorMessage
-            in
-            NoOp
-
-
-decodeJson : Decode.Value -> Result String Model
-decodeJson modelJson =
-    Decode.decodeValue modelDecoder modelJson
-
-
-modelDecoder : Decode.Decoder Model
-modelDecoder =
-    decode Model
-        |> required "icon_url" Decode.string
-        |> required "id" Decode.string
-        |> required "value" Decode.string
+    Sub.none
