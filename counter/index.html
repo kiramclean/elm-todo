@@ -9,15 +9,17 @@
     <script type="text/javascript" src="elm.js"></script>
     <script charset="utf-8">
         var incrementClickCount = 0;
-        var currentCount = localStorage.getItem("counter");
+        var currentModel = localStorage.getItem("counter");
         var app = Elm.Main.fullscreen();
-        app.ports.storageInput.send(Number(currentCount));
+        if (currentModel) {
+          app.ports.storageInput.send(JSON.parse(currentModel));
+        }
         app.ports.increment.subscribe(function() {
           incrementClickCount += 1;
           console.log("Increment has been clicked")
         })
         app.ports.storage.subscribe(function(data) {
-          localStorage.setItem('counter', data);
+          localStorage.setItem("counter", JSON.stringify(data));
         })
         window.app = app;
     </script>
