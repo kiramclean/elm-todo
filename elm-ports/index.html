@@ -1,0 +1,29 @@
+  <!DOCTYPE html>
+  <html>
+    <head>
+      <meta charset="UTF-8" />
+      <meta name="viewport" content="width=device-width" />
+      <title>Elm Ports Exercise</title>
+    </head>
+    <body>
+      <div id="root"></div>
+      <button id="increment">+</button>
+      <ul id="outbound"></ul>
+      <script type="text/javascript" src="elm.js"></script>
+      <script>
+        var root = document.getElementById('root');
+        var increment = document.getElementById('increment');
+        var outbound = document.getElementById('outbound');
+        var app = Elm.Main.embed(root);
+        window.app = app
+        app.ports.outbound.subscribe(function(data) {
+          var li = document.createElement('LI');
+          li.innerText = data;
+          outbound.appendChild(li);
+        })
+        increment.onclick = function() {
+          app.ports.increment.send({});
+        };
+      </script>
+    </body>
+  </html>
